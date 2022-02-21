@@ -151,14 +151,17 @@ void FeatureExtract::matchCornerFromScan(const typename pcl::KdTreeFLANN<PointTy
     for (size_t i = 0; i < cloud_data.points.size(); i++)
     {
         // not consider distortion
-        TransformToStart(cloud_data.points[i], point_sel, pose_local, false, SCAN_PERIOD);
+        TransformToStart(cloud_data.points[i], point_sel, pose_local, false, SCAN_PERIOD); 
+        //先把当前帧的points转换到当前帧的start下  
+        //TODO(jxl): 或许应该为true, 见作者回复 https://github.com/gogojjh/M-LOAM/issues/6
+
         kdtree_corner_from_scan->nearestKSearch(point_sel, 1, point_search_ind, point_search_sqdis);
 
         int closest_point_ind = -1, min_point_ind2 = -1;
         if (point_search_sqdis[0] < DISTANCE_SQ_THRESHOLD)
         {
             closest_point_ind = point_search_ind[0];
-            int closest_point_scan_id = int(cloud_scan.points[closest_point_ind].intensity);
+            int closest_point_scan_id = int(cloud_scan.points[closest_point_ind].intensity);//点的intensity = 线束号 + 时间比例
 
             float min_point_sqdis2 = DISTANCE_SQ_THRESHOLD;
             // search in the direction of increasing scan line
@@ -290,6 +293,8 @@ void FeatureExtract::matchSurfFromScan(const typename pcl::KdTreeFLANN<PointType
     {
         // not consider distortion
         TransformToStart(cloud_data.points[i], point_sel, pose_local, false, SCAN_PERIOD);
+        //TODO(jxl): 同上
+
         kdtree_surf_from_scan->nearestKSearch(point_sel, 1, point_search_ind, point_search_sqdis);
 
         int closest_point_ind = -1, min_point_ind2 = -1, min_point_ind3 = -1;
@@ -313,7 +318,7 @@ void FeatureExtract::matchSurfFromScan(const typename pcl::KdTreeFLANN<PointType
                 if (int(cloud_scan.points[j].intensity) <= closest_point_scan_id && point_sqdis < min_point_sqdis2)
                 {
                     min_point_sqdis2 = point_sqdis;
-                    min_point_ind2 = j;
+                    min_point_ind2 = j; //
                 }
                 // if in the higher scan line
                 else if (int(cloud_scan.points[j].intensity) > closest_point_scan_id && point_sqdis < min_point_sqdis3)
@@ -359,8 +364,11 @@ void FeatureExtract::matchSurfFromScan(const typename pcl::KdTreeFLANN<PointType
                                              cloud_scan.points[min_point_ind3].z);
                 Eigen::Vector3f w = (last_point_j - last_point_l).cross(last_point_j - last_point_m);
                 w.normalize();
-                float negative_OA_dot_norm = -w.dot(last_point_j);
+                float negative_OA_dot_norm = -w.dot(last_point_j); //k帧scan坐标系原点到(j,l,m)平面的距离
                 float pd2 = -(w.x() * point_sel.x + w.y() * point_sel.y + w.z() * point_sel.z + negative_OA_dot_norm); // distance
+                //通过打印发现，w.dot(last_point_j), pd2有正有负
+                //https://en.wikipedia.org/wiki/Hesse_normal_form
+
                 float s = 1 - 0.9f * fabs(pd2) / sqrt(sqrSum(point_sel.x, point_sel.y, point_sel.z));
 
                 Eigen::Vector4d coeff(w.x(), w.y(), w.z(), negative_OA_dot_norm);
@@ -368,7 +376,7 @@ void FeatureExtract::matchSurfFromScan(const typename pcl::KdTreeFLANN<PointType
                 feature.idx_ = i;
                 feature.point_ = Eigen::Vector3d{cloud_data.points[i].x, cloud_data.points[i].y, cloud_data.points[i].z};
                 feature.coeffs_ = coeff;
-                feature.type_ = 's';
+                feature.type_ = 's'; //在代码一致性方面，或许corner points为默认类型‘n’。但是feature type在计算相邻两帧delta_T时没有用，所以无伤大雅
                 features.push_back(feature);
             }
         }
@@ -566,7 +574,7 @@ void FeatureExtract::matchSurfFromMap(const typename pcl::KdTreeFLANN<PointType>
     for (size_t i = 0; i < cloud_size; i++)
     {
         point_ori = cloud_data.points[i];
-        pointAssociateToMap(point_ori, point_sel, pose_local);
+        pointAssociateToMap(point_ori, point_sel, pose_local); //n号雷达在i处的surf points, 转换到主雷达pivot下
         kdtree_surf_from_map->nearestKSearch(point_sel, num_neighbors, point_search_idx, point_search_sq_dis);
         if (point_search_sq_dis[num_neighbors - 1] < MIN_MATCH_SQ_DIS)
         {
@@ -596,7 +604,7 @@ void FeatureExtract::matchSurfFromMap(const typename pcl::KdTreeFLANN<PointType>
             if (plane_valid)
             {
                 bool is_in_laser_fov = false;
-                if (CHECK_FOV)
+                if (CHECK_FOV) //TODO(jxl): FOV检测的算法原理
                 {
                     PointType transform_pos;
                     PointType point_on_z_axis, point_on_z_axis_trans;
@@ -628,10 +636,10 @@ void FeatureExtract::matchSurfFromMap(const typename pcl::KdTreeFLANN<PointType>
 
                     Eigen::Vector4d coeff(norm(0), norm(1), norm(2), negative_OA_dot_norm);
                     PointPlaneFeature feature;
-                    feature.idx_ = i;
-                    feature.point_ = Eigen::Vector3d{point_ori.x, point_ori.y, point_ori.z};
-                    feature.coeffs_ = coeff;
-                    feature.laser_idx_ = (size_t)point_ori.intensity;
+                    feature.idx_ = i; //n号雷达在滑窗中对应帧下的surf points index
+                    feature.point_ = Eigen::Vector3d{point_ori.x, point_ori.y, point_ori.z}; //n号雷达在滑窗中对应帧下的surf point
+                    feature.coeffs_ = coeff; //correspondances形成的平面方程
+                    feature.laser_idx_ = (size_t)point_ori.intensity; //n号雷达在滑窗中对应帧下的surf point的激光线束号
                     feature.type_ = 's';
                     features[cloud_cnt] = feature;
                     cloud_cnt++;
@@ -717,7 +725,7 @@ bool FeatureExtract::matchCornerPointFromMap(const typename pcl::KdTreeFLANN<Poi
             {
                 is_in_laser_fov = true;
             }
-            if (is_in_laser_fov) // TODO
+            if (is_in_laser_fov)
             {
                 // Eigen::Vector3f point_on_line = center;
                 // Eigen::Vector3f X0(point_sel.x, point_sel.y, point_sel.z);
@@ -788,14 +796,14 @@ bool FeatureExtract::matchCornerPointFromMap(const typename pcl::KdTreeFLANN<Poi
 }
 
 template <typename PointType>
-bool FeatureExtract::matchSurfPointFromMap(const typename pcl::KdTreeFLANN<PointType>::Ptr &kdtree_surf_from_map,
-                                           const typename pcl::PointCloud<PointType> &cloud_map,
-                                           const PointType &point_ori,
-                                           const Pose &pose_local,
-                                           PointPlaneFeature &feature,
-                                           const size_t &idx,
-                                           const size_t &N_NEIGH,
-                                           const bool &CHECK_FOV)
+bool FeatureExtract::matchSurfPointFromMap(const typename pcl::KdTreeFLANN<PointType>::Ptr &kdtree_surf_from_map, //n号雷达在主雷达pivot下的local surf map kdtree
+                                           const typename pcl::PointCloud<PointType> &cloud_map, //n号雷达在主雷达pivot下的local surf map
+                                           const PointType &point_ori, //n号雷达在i帧下的surf points[que_idx]
+                                           const Pose &pose_local, //主雷达pivot到副雷达i的变换
+                                           PointPlaneFeature &feature, //n号雷达在i帧下的surf points[que_idx]在local map中的correspondances放置在all_features[que_idx]
+                                           const size_t &idx, //que_idx
+                                           const size_t &N_NEIGH, //5
+                                           const bool &CHECK_FOV) //false
 {
     if (!pcl::traits::has_field<PointType, pcl::fields::intensity>::value)
     {

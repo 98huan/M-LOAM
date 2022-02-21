@@ -67,7 +67,7 @@ extern int SEGMENT_VALID_LINE_NUM;
 extern float SEGMENT_THETA;
 
 // LiDAR
-extern size_t IDX_REF;
+extern size_t IDX_REF; //0
 extern size_t NUM_OF_LASER;
 extern size_t N_SCANS;
 
@@ -113,7 +113,7 @@ extern int N_CALIB;
 extern float ODOM_GF_RATIO;
 
 extern int SKIP_NUM_ODOM_PUB;
-extern int LM_OPT_ENABLE;
+extern int LM_OPT_ENABLE; //default 
 
 // mapping
 extern float MAP_CORNER_RES;
@@ -164,12 +164,12 @@ class PointPlaneFeature
 {
 public:
     PointPlaneFeature() : idx_(0), laser_idx_(0), type_('n') {}
-    size_t idx_;
-    size_t laser_idx_;
-    Eigen::Vector3d point_;
-    Eigen::VectorXd coeffs_;
-    Eigen::MatrixXd jaco_;
-    char type_;
+    size_t idx_; //在k+1帧feature points中的index。
+    size_t laser_idx_; //属于多少线束号，滑窗local map和后端使用
+    Eigen::Vector3d point_; //在k+1帧feature points中的坐标, point i。    p_sel = R_k_k+1 * i + t_k_k+1， 然后在k帧feature kd-tree points中找最近邻points
+    Eigen::VectorXd coeffs_; //corner correspondace(i: j, l)； surf correspondace(i: j, l, m)平面方程系数；
+    Eigen::MatrixXd jaco_; //残差(点到面，点到线)对point i的jacobian, 维数：1*6
+    char type_; //surf point为‘s’, corner point为‘c’，滑窗local map和后端使用
 
     EIGEN_MAKE_ALIGNED_OPERATOR_NEW
 };
@@ -185,9 +185,9 @@ public:
         return this->score_ < fws.score_;
     }
     
-    size_t idx_;
+    size_t idx_; //点point i在自己帧下的index
     double score_;
-    Eigen::MatrixXd jaco_;
+    Eigen::MatrixXd jaco_; //残差(点到面，点到线)对point i的jacobian
 };
 
 class ScanInfo

@@ -122,21 +122,23 @@ void evalHessian(const ceres::CRSMatrix &jaco, Eigen::Matrix<double, 6, 6> &mat_
 
 void evalDegenracy(const Eigen::Matrix<double, 6, 6> &mat_H, PoseLocalParameterization *local_parameterization);
 
+
+
 // ****************** active feature selection
 class ActiveFeatureSelection
 {
 public:
     // ****************** good feature selection
-    void evaluateFeatJacobianMatching(const Pose &pose_local,
-                                      PointPlaneFeature &feature,
-                                      const Eigen::Matrix3d &cov_matrix)
+    void evaluateFeatJacobianMatching(const Pose &pose_local, //curr frame's pose in map
+                                      PointPlaneFeature &feature, //source point in curr frame and the correspondances in local map
+                                      const Eigen::Matrix3d &cov_matrix)//source point's cov
     {
         double **param = new double *[1];
         param[0] = new double [SIZE_POSE];
         param[0][0] = pose_local.t_(0);
         param[0][1] = pose_local.t_(1);
         param[0][2] = pose_local.t_(2);
-        param[0][3] = pose_local.q_.x();
+        param[0][3] = pose_local.q_.x(); //JPL
         param[0][4] = pose_local.q_.y();
         param[0][5] = pose_local.q_.z();
         param[0][6] = pose_local.q_.w();
@@ -156,12 +158,12 @@ public:
         }
 
         double *rho = new double[3];
-        double sqr_error = res[0] * res[0] + res[1] * res[1] + res[0] * res[0];
+        double sqr_error = res[0] * res[0] + res[1] * res[1] + res[0] * res[0]; //TODO(jxl): res[1]不存在， https://github.com/gogojjh/M-LOAM/issues/13
         loss_function_->Evaluate(sqr_error, rho);
 
         Eigen::Map<Eigen::Matrix<double, 1, 7, Eigen::RowMajor>> mat_jacobian(jaco[0]);
         feature.jaco_ = mat_jacobian.topLeftCorner<1, 6>();
-        // feature.jaco_ *= sqrt(std::max(0.0, rho[1])); // TODO
+        // feature.jaco_ *= sqrt(std::max(0.0, rho[1]));
         // LOG_EVERY_N(INFO, 2000) << "error: " << sqrt(sqr_error) << ", rho_der: " << rho[1] 
         //                         << ", logd: " << common::logDet(feature.jaco_.transpose() * feature.jaco_, true);
 
@@ -173,12 +175,12 @@ public:
         delete[] param;
     }
 
-    void evalFullHessian(const pcl::KdTreeFLANN<PointIWithCov>::Ptr &kdtree_from_map,
-                         const PointICovCloud &laser_map,
-                         const PointICovCloud &laser_cloud,
-                         const Pose &pose_local,
-                         const char feature_type,
-                         Eigen::Matrix<double, 6, 6> &mat_H,
+    void evalFullHessian(const pcl::KdTreeFLANN<PointIWithCov>::Ptr &kdtree_from_map, //local map kdtree
+                         const PointICovCloud &laser_map, //local map
+                         const PointICovCloud &laser_cloud, //curr points
+                         const Pose &pose_local, //curr frame's pose in map
+                         const char feature_type, //surf: 's', corner: 'c'
+                         Eigen::Matrix<double, 6, 6> &mat_H, //hessian matrix
                          int &feat_num)
     {
         size_t num_all_features = laser_cloud.size();
@@ -211,8 +213,8 @@ public:
             }
             if (!b_match) continue;
             Eigen::Matrix3d cov_matrix;
-            extractCov(laser_cloud.points[i], cov_matrix);
-            evaluateFeatJacobianMatching(pose_local, all_features[i], cov_matrix);
+            extractCov(laser_cloud.points[i], cov_matrix); //点的cov赋给cov_matrix
+            evaluateFeatJacobianMatching(pose_local, all_features[i], cov_matrix); //计算每个点的残差对pose的雅克比
             const Eigen::MatrixXd &jaco = all_features[i].jaco_;
             mat_H = mat_H + jaco.transpose() * jaco;
             // v_jaco.push_back(jaco);
@@ -226,23 +228,25 @@ public:
         // fout.close();
     }
 
-    void goodFeatureMatching(const pcl::KdTreeFLANN<PointIWithCov>::Ptr &kdtree_from_map,
-                             const PointICovCloud &laser_map,
-                             const PointICovCloud &laser_cloud,
-                             const Pose &pose_local,
-                             std::vector<PointPlaneFeature> &all_features,
-                             std::vector<size_t> &sel_feature_idx,
+
+    //跟Estimator::goodFeatureMatching()有一些相同的地方
+    void goodFeatureMatching(const pcl::KdTreeFLANN<PointIWithCov>::Ptr &kdtree_from_map, //local map kdtree
+                             const PointICovCloud &laser_map, //local map
+                             const PointICovCloud &laser_cloud, //curr frame points
+                             const Pose &pose_local, //curr pose
+                             std::vector<PointPlaneFeature> &all_features, //[out], all_features[i]: index = i point对应的correspondance
+                             std::vector<size_t> &sel_feature_idx, //[out], 第i个好point在点云中的idx放到sel_feature_idx[i]
                              const char feature_type,
-                             const string gf_method,
-                             const double gf_ratio,
-                             Eigen::Matrix<double, 6, 6> &sub_mat_H)
+                             const string gf_method, //挑选好points的方法
+                             const double gf_ratio, //good feature比例
+                             Eigen::Matrix<double, 6, 6> &sub_mat_H)//[out], 累加好points的残差对pose的雅克比
     {
         size_t num_all_features = laser_cloud.size();
         all_features.resize(num_all_features);
 
         std::vector<size_t> all_feature_idx(num_all_features);
         std::vector<int> feature_visited(num_all_features, -1);
-        std::iota(all_feature_idx.begin(), all_feature_idx.end(), 0);
+        std::iota(all_feature_idx.begin(), all_feature_idx.end(), 0); //初始化为0,1，2，...
 
         size_t num_use_features;
         num_use_features = static_cast<size_t>(num_all_features * gf_ratio);
@@ -254,9 +258,9 @@ public:
         size_t num_rnd_que;
         TicToc t_sel_feature;
         size_t n_neigh = 5;
-        if (gf_method == "wo_gf")
+        if (gf_method == "wo_gf") //gf_ratio == 1
         {
-            for (size_t j = 0; j < all_feature_idx.size(); j++)
+            for (size_t j = 0; j < all_feature_idx.size(); j++) //按顺序来
             {
                 size_t que_idx = all_feature_idx[j];
                 b_match = false;
@@ -264,12 +268,12 @@ public:
                 {
                     b_match = f_extract.matchSurfPointFromMap(kdtree_from_map,
                                                               laser_map,
-                                                              laser_cloud.points[que_idx],
+                                                              laser_cloud.points[que_idx], //point
                                                               pose_local,
-                                                              all_features[que_idx],
+                                                              all_features[que_idx], //correspondance
                                                               que_idx,
                                                               n_neigh,
-                                                              false);
+                                                              false); //计算correspondance
                 }
                 else if (feature_type == 'c')
                 {
@@ -282,13 +286,13 @@ public:
                                                                 n_neigh,
                                                                 false);
                 }
-                if (b_match)
+                if (b_match) //找到了correspondance
                 {
                     Eigen::Matrix3d cov_matrix;
                     extractCov(laser_cloud.points[que_idx], cov_matrix);
                     evaluateFeatJacobianMatching(pose_local,
                                                  all_features[que_idx],
-                                                 cov_matrix);
+                                                 cov_matrix); //计算每个点的残差对pose的雅克比
                     const Eigen::MatrixXd &jaco = all_features[que_idx].jaco_;
                     sub_mat_H += jaco.transpose() * jaco;
 
@@ -303,13 +307,13 @@ public:
             {
                 if ((num_sel_features >= num_use_features) ||
                     (all_feature_idx.size() == 0) ||
-                    (t_sel_feature.toc() > MAX_FEATURE_SELECT_TIME))
+                    (t_sel_feature.toc() > MAX_FEATURE_SELECT_TIME)) //TODO(jxl): 作者为了实时性，可能会忽略某些point，实际运行时间得验证。
                     break;
                 // if (num_sel_features >= num_use_features ||
                 //     all_feature_idx.size() == 0)
                 //     break;
                     
-                size_t j = rgi_.geneRandUniform(0, all_feature_idx.size() - 1);
+                size_t j = rgi_.geneRandUniform(0, all_feature_idx.size() - 1); //随机挑选
                 size_t que_idx = all_feature_idx[j];
                 b_match = false;
                 if (feature_type == 's')
@@ -344,42 +348,27 @@ public:
                     const Eigen::MatrixXd &jaco = all_features[que_idx].jaco_;
                     sub_mat_H += jaco.transpose() * jaco;
 
-                    sel_feature_idx[num_sel_features] = que_idx;
+                    sel_feature_idx[num_sel_features] = que_idx; 
                     num_sel_features++;
                 }
-                all_feature_idx.erase(all_feature_idx.begin() + j);
+                all_feature_idx.erase(all_feature_idx.begin() + j); //对visited point置标记
             }
         }
         else if (gf_method == "fps")
         {
             size_t que_idx;
-            size_t k = rgi_.geneRandUniform(0, all_feature_idx.size() - 1); // randomly select a starting point
+            size_t k = rgi_.geneRandUniform(0, all_feature_idx.size() - 1); // randomly select a starting point, 随机选择一个开始的point
             feature_visited[k] = 1;
-            size_t cnt_visited = 1;
+            size_t cnt_visited = 1; //这个变量没什么用处
             PointIWithCov point_old = laser_cloud.points[k]; 
-            b_match = false;
-            if (feature_type == 's')
-            {            
-                b_match = f_extract.matchSurfPointFromMap(kdtree_from_map,
-                                                          laser_map,
-                                                          point_old,
-                                                          pose_local,
-                                                          all_features[k],
-                                                          k,
-                                                          n_neigh,
-                                                          false);
-            }
-            else if (feature_type == 'c')
-            {
-                b_match = f_extract.matchCornerPointFromMap(kdtree_from_map,
-                                                            laser_map,
-                                                            point_old,
-                                                            pose_local,
-                                                            all_features[k],
-                                                            k,
-                                                            n_neigh,
-                                                            false);
-            }
+            b_match = f_extract.matchSurfPointFromMap(kdtree_from_map, //TODO(jxl): 怎么没有区分feature type， https://github.com/gogojjh/M-LOAM/issues/13
+                                                      laser_map,
+                                                      point_old,
+                                                      pose_local,
+                                                      all_features[k],
+                                                      k,
+                                                      n_neigh,
+                                                      false);
             if (b_match)
             {
                 sel_feature_idx[num_sel_features] = k;
@@ -387,19 +376,19 @@ public:
             }            
 
             std::vector<float> dist(num_all_features, 1e5); // record the minimum distance of each point in set A to each point in set B
-            while (true)
+            while (true)//对整个raw point的遍历发生在该while里
             {
                 if ((num_sel_features >= num_use_features) ||
                     (all_feature_idx.size() == 0) ||
-                    (t_sel_feature.toc() > MAX_FEATURE_SELECT_TIME))
+                    (t_sel_feature.toc() > MAX_FEATURE_SELECT_TIME)) //TODO(jxl): 作者为了实时性，可能会忽略某些point，实际运行时间得验证。
                     break;
                 // if ((num_sel_features >= num_use_features) ||
                 //     (all_feature_idx.size() == 0) ||
                 //     (cnt_visited == num_all_features))
                 //     break;
 
-                float best_d = -1;
-                size_t best_j = 1;
+                float best_d = -1; //在还没有visited raw points中距离k point最远的point 之间的距离
+                size_t best_j = 1; //在还没有visited raw points中距离k point最远的point index
                 for (size_t j = 0; j < num_all_features; j++)
                 {
                     if (feature_visited[j] == 1) continue;
@@ -408,12 +397,12 @@ public:
                                                   point_old.y - point_new.y,
                                                   point_old.z - point_new.z));
                     float d2 = std::min(d, dist[j]);
-                    dist[j] = d2;
-                    best_j = d2 > best_d ? j : best_j;
+                    dist[j] = d2; //dist[j]: 存储j point与k point之间的距离
+                    best_j = d2 > best_d ? j : best_j; //TODO(jxl): 为何找最远的point？
                     best_d = d2 > best_d ? d2 : best_d;
                 }
                 que_idx = best_j;
-                point_old = laser_cloud.points[que_idx];
+                point_old = laser_cloud.points[que_idx]; //注意：old point不断在更新
                 feature_visited[que_idx] = 1;
                 cnt_visited++;
 
@@ -448,21 +437,21 @@ public:
                                                  all_features[que_idx],
                                                  cov_matrix);
                     const Eigen::MatrixXd &jaco = all_features[que_idx].jaco_;
-                    sub_mat_H += jaco.transpose() * jaco;
+                    sub_mat_H += jaco.transpose() * jaco; //距离old point最远point的雅克比，即整个雅克比是由距离自己point最远的point的雅克比构成
 
                     sel_feature_idx[num_sel_features] = que_idx;
                     num_sel_features++;
                 }            
             }
         }
-        else if (gf_method == "gd_fix" || gf_method == "gd_float")
+        else if (gf_method == "gd_fix" || gf_method == "gd_float") //跟Estimator::goodFeatureMatching()比例不等于1.0时，逻辑完全相同
         {
             stringstream ss;
             while (true)
             {
                 if ((num_sel_features >= num_use_features) ||
                     (all_feature_idx.size() == 0) || 
-                    (t_sel_feature.toc() > MAX_FEATURE_SELECT_TIME))
+                    (t_sel_feature.toc() > MAX_FEATURE_SELECT_TIME)) //TODO(jxl): 作者为了实时性，可能会忽略某些point，实际运行时间得验证。
                     break;
                 // if ((num_sel_features >= num_use_features * 0.8) && 
                 //     (t_sel_feature.toc() > MAX_FEATURE_SELECT_TIME))
@@ -490,7 +479,7 @@ public:
                         }
                         num_rnd_que++;
                     }
-                    if (num_rnd_que >= MAX_RANDOM_QUEUE_TIME || t_sel_feature.toc() > MAX_FEATURE_SELECT_TIME)
+                    if (num_rnd_que >= MAX_RANDOM_QUEUE_TIME || t_sel_feature.toc() > MAX_FEATURE_SELECT_TIME) //TODO(jxl): 作者为了实时性，可能会忽略某些point，实际运行时间得验证。
                         break;
 
                     size_t que_idx = all_feature_idx[j];
@@ -536,6 +525,8 @@ public:
 
                     const Eigen::MatrixXd &jaco = all_features[que_idx].jaco_;
                     cur_det = common::logDet(sub_mat_H + jaco.transpose() * jaco, true);
+                    //TODO(jxl): J^T*J分解，这块打分的依据是什么？ https://github.com/gogojjh/M-LOAM/issues/10
+
                     heap_subset.push(FeatureWithScore(que_idx, cur_det, jaco));
                     if (heap_subset.size() >= size_rnd_subset)
                     {
@@ -557,11 +548,11 @@ public:
                         break;
                     }
                 }
-                if (num_rnd_que >= MAX_RANDOM_QUEUE_TIME || t_sel_feature.toc() > MAX_FEATURE_SELECT_TIME)
+                if (num_rnd_que >= MAX_RANDOM_QUEUE_TIME || t_sel_feature.toc() > MAX_FEATURE_SELECT_TIME) //TODO(jxl): 作者为了实时性，可能会忽略某些point，实际运行时间得验证。
                     break;
             }
         } 
-        if (num_rnd_que >= MAX_RANDOM_QUEUE_TIME || t_sel_feature.toc() > MAX_FEATURE_SELECT_TIME)
+        if (num_rnd_que >= MAX_RANDOM_QUEUE_TIME || t_sel_feature.toc() > MAX_FEATURE_SELECT_TIME) //TODO(jxl): 作者为了实时性，可能会忽略某些point，实际运行时间得验证。
         {
             // std::cerr << "mapping [goodFeatureMatching]: early termination!" << std::endl;
             LOG_EVERY_N(INFO, 100) << "early termination: feature_type " << feature_type << ", " << num_rnd_que << ", " << t_sel_feature.toc();

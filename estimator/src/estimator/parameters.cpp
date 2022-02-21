@@ -13,7 +13,9 @@
 
 #include "parameters.h"
 
-int MLOAM_RESULT_SAVE;
+// int MLOAM_RESULT_SAVE; //default
+int MLOAM_RESULT_SAVE = 1; //TODO(jxl): for save result
+
 std::string OUTPUT_FOLDER;
 std::string MLOAM_ODOM_PATH;
 std::string MLOAM_MAP_PATH;
@@ -41,7 +43,7 @@ float SEGMENT_THETA;
 // LiDAR
 size_t NUM_OF_LASER;
 size_t N_SCANS;
-size_t IDX_REF;
+size_t IDX_REF; //0
 
 int WINDOW_SIZE;
 int OPT_WINDOW_SIZE;
@@ -119,6 +121,7 @@ T readParam(ros::NodeHandle &n, std::string name)
     }
     return ans;
 }
+
 
 void readParameters(std::string config_file)
 {
@@ -213,14 +216,14 @@ void readParameters(std::string config_file)
     SEGMENT_CLOUD = fsSettings["segment_cloud"];
     HORIZON_SCAN = fsSettings["horizon_scan"];
     MIN_CLUSTER_SIZE = fsSettings["min_cluster_size"];
-    MIN_LINE_SIZE = fsSettings["min_line_size"];
+    MIN_LINE_SIZE = fsSettings["min_line_size"];  //not set, 该变量不使用
     SEGMENT_VALID_POINT_NUM = fsSettings["segment_valid_point_num"];
     SEGMENT_VALID_LINE_NUM = fsSettings["segment_valid_line_num"];
     SEGMENT_THETA = fsSettings["segment_theta"];
 
     int idx_ref = fsSettings["idx_ref"];
     assert(idx_ref >= 0);
-    IDX_REF = (size_t)idx_ref;
+    IDX_REF = (size_t)idx_ref; //0
 
     SCAN_PERIOD = fsSettings["scan_period"];
     DISTANCE_SQ_THRESHOLD = fsSettings["distance_sq_threshold"];
@@ -252,6 +255,7 @@ void readParameters(std::string config_file)
 
     SKIP_NUM_ODOM_PUB = fsSettings["skip_num_odom_pub"];
     if (SKIP_NUM_ODOM_PUB == 0) SKIP_NUM_ODOM_PUB = 1;
+
 
     LM_OPT_ENABLE = fsSettings["lm_opt_enable"];
 

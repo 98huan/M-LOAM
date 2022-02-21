@@ -59,7 +59,7 @@
 #include "../factor/impl_loss_function.hpp"
 #include "mloam_pcl/point_with_time.hpp"
 
-#define MAX_FEATURE_SELECT_TIME 7 // 7ms
+#define MAX_FEATURE_SELECT_TIME 7 // 7ms  
 #define MAX_RANDOM_QUEUE_TIME 10
 
 class Estimator
@@ -73,7 +73,7 @@ class Estimator
 
     void inputCloud(const double &t, const std::vector<common::PointCloud> &v_laser_cloud_in);
     void inputCloud(const double &t, const std::vector<common::PointITimeCloud> &v_laser_cloud_in);
-    void inputCloud(const double &t, const common::PointCloud &laser_cloud_in);
+    void inputCloud(const double &t, const common::PointCloud &laser_cloud_in);  //not defined
 
     // process measurements
     void processMeasurements();
@@ -150,15 +150,17 @@ class Estimator
     bool b_system_inited_{};
 
     Pose pose_laser_prev_;
-    // pose from laser at k=0 to laser at k=K
-    std::vector<Pose> pose_laser_cur_;
-    // pose from laser at k=K-1 to laser at k=K
-    std::vector<Pose> pose_rlt_;
 
-    std::vector<Eigen::Quaterniond> qbl_;
+    // pose from laser at k=0 to laser at k=K
+    std::vector<Pose> pose_laser_cur_; //2个
+
+    // pose from laser at k=K-1 to laser at k=K
+    std::vector<Pose> pose_rlt_; //2个
+
+    std::vector<Eigen::Quaterniond> qbl_; //body系(主雷达)到各雷达的外参, 大小为2，主雷达到主雷达为q=I,t=0
     std::vector<Eigen::Vector3d> tbl_;
-    std::vector<double> tdbl_;
-    std::vector<Eigen::Matrix<double, 6, 6> > covbl_;
+    std::vector<double> tdbl_; //时间戳offset
+    std::vector<Eigen::Matrix<double, 6, 6> > covbl_; //外参的cov
 
     // slide window
     // xx[cir_buf_cnt_] indicates the newest variables and measurements
@@ -166,20 +168,29 @@ class Estimator
 
     size_t cir_buf_cnt_{};
 
-    CircularBuffer<Eigen::Quaterniond> Qs_;
+    CircularBuffer<Eigen::Quaterniond> Qs_; //WINDOW_SIZE + 1， 主雷达每帧在odom下的位姿
     CircularBuffer<Eigen::Vector3d> Ts_;
     CircularBuffer<std_msgs::Header> Header_;
-    std::vector<CircularBuffer<common::PointICloud> > surf_points_stack_, corner_points_stack_;
+
+    std::vector<CircularBuffer<common::PointICloud> > surf_points_stack_, corner_points_stack_; 
+    //2个，分别表示左右两个雷达; 每个对象 WINDOW_SIZE + 1大小，保存窗口中对应帧raw feature points(没有去畸变的)的less surf和less corner
+
     std::vector<CircularBuffer<int> > surf_points_stack_size_, corner_points_stack_size_;
+    //2个，分别表示左右两个雷达；每个对象 WINDOW_SIZE + 1大小,保存窗口中对应帧less surf和less corner点的个数
 
     pcl::VoxelGrid<PointI> down_size_filter_corner_, down_size_filter_surf_;
 
-    std::vector<common::PointICloud> surf_points_local_map_, surf_points_local_map_filtered_;
+    std::vector<common::PointICloud> surf_points_local_map_, surf_points_local_map_filtered_; //2个， 
+    //surf_points_local_map_[n]: n号雷达在主雷达pivot下的local surf map， 把n号雷达在滑窗内的所有帧surf points都转换到主雷达pivot帧下
+
     std::vector<common::PointICloud> surf_points_pivot_map_;
-    std::vector<common::PointICloud> corner_points_local_map_, corner_points_local_map_filtered_;
+
+    std::vector<common::PointICloud> corner_points_local_map_, corner_points_local_map_filtered_; //2个，
+    //corner_points_local_map_[n]: n号雷达在主雷达pivot下的local corner map, 把n号雷达在滑窗内的所有帧corner points都转换到主雷达pivot帧下
+
     std::vector<common::PointICloud> corner_points_pivot_map_;
 
-    std::vector<std::vector<Pose> > pose_local_;
+    std::vector<std::vector<Pose> > pose_local_; //2个， 每个对象 WINDOW_SIZE + 1大小
 
     double prev_time_{}, cur_time_{};
     double td_{};
@@ -191,26 +202,39 @@ class Estimator
     LidarTracker lidar_tracker_;
     InitialExtrinsics initial_extrinsics_;
 
-    std::queue<std::pair<double, std::vector<cloudFeature> > > feature_buf_;
-    pair<double, std::vector<cloudFeature> > prev_feature_, cur_feature_;
-    std::vector<std::vector<std::vector<PointPlaneFeature> > > surf_map_features_, corner_map_features_;
-    std::vector<std::vector<PointPlaneFeature> > cumu_surf_map_features_, cumu_corner_map_features_;
+    std::queue<std::pair<double, std::vector<cloudFeature> > > feature_buf_; //每帧features
+
+    pair<double, std::vector<cloudFeature> > prev_feature_, cur_feature_; //k, k+1帧左右雷达features
+
+    std::vector<std::vector<std::vector<PointPlaneFeature> > > surf_map_features_, corner_map_features_;//2个，每个对象WINDOW_SIZE + 1大小
+    //surf_map_features_[n][i]: “n号雷达在滑窗中i帧下surf points”在“n号雷达的local surf map”中的correspondances.这些features是在local map下的points
+    //corner_map_features_[n][i]: 同理
+
+    std::vector<std::vector<PointPlaneFeature> > cumu_surf_map_features_, cumu_corner_map_features_; //2个， 每个雷达在pivot帧下的points
+    //cumu_surf_map_features_[n]: n号雷达在pivot帧下的surf points在n号雷达的local surf map中的correspondances.
+    //cumu_corner_map_features_[n]: 同理
+
     size_t cumu_surf_feature_cnt_, cumu_corner_feature_cnt_;
 
-    std::vector<std::vector<std::vector<size_t> > > sel_surf_feature_idx_, sel_corner_feature_idx_;
+    std::vector<std::vector<std::vector<size_t> > > sel_surf_feature_idx_, sel_corner_feature_idx_; //2个，每个对象WINDOW_SIZE + 1大小
+    //ESTIMATE_EXTRINSIC == 0下使用
+    //sel_surf_feature_idx_[n][i][j]: 挑选出n号雷达在i帧下的第j个好point在自己点云帧下的index放进 sel_surf_feature_idx_[n][i][j]
+    //sel_corner_feature_idx_[n][i][j]: 同理
 
-    double **para_pose_{};
-    double **para_ex_pose_{};
-    double *para_td_{};
 
-    Eigen::VectorXd eig_thre_;
+
+    double **para_pose_{}; //OPT_WINDOW_SIZE + 1, Xv。每个位姿的顺序是[tx, ty, tz, qx, qy, qz, qw]
+    double **para_ex_pose_{}; //2个, Xe
+    double *para_td_{}; //2个, time offset
+
+    Eigen::VectorXd eig_thre_; //大小：OPT_WINDOW_SIZE + 1 + 2
     std::vector<double> log_lambda_;
     std::vector<Pose> log_extrinsics_;
 
-    std::vector<double> d_factor_calib_;
-    std::vector<double> cur_eig_calib_;
-    std::vector<std::vector<std::pair<double, Pose> > > pose_calib_;
-    std::vector<bool> calib_converge_;
+    std::vector<double> d_factor_calib_; //2个
+    std::vector<double> cur_eig_calib_;  //2个，没有使用
+    std::vector<std::vector<std::pair<double, Pose> > > pose_calib_; //2个
+    std::vector<bool> calib_converge_; //2个
     std::vector<size_t> num_residuals_;
 
     // for marginalization
@@ -223,7 +247,7 @@ class Estimator
       total_solver_time_, total_marginalization_time_, total_whole_odom_time_;
     int total_corner_feature_, total_surf_feature_;
 
-    std::vector<nav_msgs::Path> v_laser_path_;
+    std::vector<nav_msgs::Path> v_laser_path_; //2个
 
     pcl::PCDWriter pcd_writer_;
 

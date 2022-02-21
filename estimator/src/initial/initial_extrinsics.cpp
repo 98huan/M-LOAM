@@ -43,10 +43,10 @@ void InitialExtrinsics::clearState()
 
 void InitialExtrinsics::setParameter()
 {
-    for (size_t i = 0; i < NUM_OF_LASER; i++) calib_ext_.push_back(Pose(QBL[i], TBL[i], TDBL[i]));
+    for (size_t i = 0; i < NUM_OF_LASER; i++) calib_ext_.push_back(Pose(QBL[i], TBL[i], TDBL[i])); //q=I, t=0, t_offset=0
 
     cov_rot_state_ = std::vector<bool>(NUM_OF_LASER, false);
-    cov_rot_state_[IDX_REF] = true;
+    cov_rot_state_[IDX_REF] = true; //IDX_REF: 0
     full_cov_rot_state_ = false;
 
     cov_pos_state_ = std::vector<bool>(NUM_OF_LASER, false);
@@ -76,7 +76,7 @@ bool InitialExtrinsics::setCovTranslation(const size_t &idx)
     if (std::find(cov_pos_state_.begin(), cov_pos_state_.end(), false) == cov_pos_state_.end()) full_cov_pos_state_ = true;
 }
 
-bool InitialExtrinsics::addPose(const std::vector<Pose> &pose_laser)
+bool InitialExtrinsics::addPose(const std::vector<Pose> &pose_laser) //pose_laser[n]: n号雷达prev scan到curr scan的变换
 {
     assert(pose_laser.size() == NUM_OF_LASER);
     bool b_check = true;
@@ -112,11 +112,13 @@ bool InitialExtrinsics::checkScrewMotion(const Pose &pose_ref, const Pose &pose_
     // printf("r_dis: %f, t_dis: %f \n", r_dis, t_dis);
     // v_rd_.push_back(r_dis);
     // v_td_.push_back(t_dis);
-    return (r_dis < EPSILON_R) && (t_dis < EPSILON_T);
+    return (r_dis < EPSILON_R) && (t_dis < EPSILON_T); //const value
 }
 
-// The quaternion is used in the Hamilton formula
-bool InitialExtrinsics::calibExRotation(const size_t &idx_ref, const size_t &idx_data, Pose &calib_result)
+
+bool InitialExtrinsics::calibExRotation(const size_t &idx_ref,  //0
+                                        const size_t &idx_data, //1
+                                        Pose &calib_result)//[out]
 {
     assert(idx_ref < NUM_OF_LASER);
     assert(idx_data < NUM_OF_LASER);
@@ -126,8 +128,8 @@ bool InitialExtrinsics::calibExRotation(const size_t &idx_ref, const size_t &idx
     const size_t indice = pose_laser_add_.first;
     const std::vector<Pose> &pose_laser = pose_laser_add_.second;
     {
-        const Pose &pose_ref = pose_laser[idx_ref];
-        const Pose &pose_data = pose_laser[idx_data];
+        const Pose &pose_ref = pose_laser[idx_ref];    //主雷达prev到curr的delta_T
+        const Pose &pose_data = pose_laser[idx_data]; //副雷达prev到curr的delta_T
 
         Eigen::Quaterniond r1 = pose_ref.q_;
         Eigen::Quaterniond r2 = calib_ext_[idx_data].q_ * pose_data.q_ * calib_ext_[idx_data].inverse().q_;
@@ -137,14 +139,17 @@ bool InitialExtrinsics::calibExRotation(const size_t &idx_ref, const size_t &idx
         Eigen::Matrix4d L, R; // Q1 and Q2 to represent the quaternion representation
         double w = pose_ref.q_.w();
         Eigen::Vector3d q = pose_ref.q_.vec();
-        L.block<3, 3>(0, 0) = w * Eigen::Matrix3d::Identity() + Utility::skewSymmetric(q); // LeftQuatMatrix
+        L.block<3, 3>(0, 0) = w * Eigen::Matrix3d::Identity() + Utility::skewSymmetric(q); 
         L.block<3, 1>(0, 3) = q;
-        L.block<1, 3>(3, 0) = -q.transpose();
+        L.block<1, 3>(3, 0) = -q.transpose(); 
         L(3, 3) = w;
+        //TODO(jxl): https://github.com/hyye/lio-mapping/issues/69
+        //和作者邮件沟通后，确认mloam和lio-mapping一样，四元数都是JPL下的惯例
+        //作者的四元数定义是JPL, 此处是JPL下的qL matrix，差一个减号. 跟作者邮件沟通说这的加号是对的，暂时还未完全理解
 
         w = pose_data.q_.w();
         q = pose_data.q_.vec();
-        R.block<3, 3>(0, 0) = w * Eigen::Matrix3d::Identity() - Utility::skewSymmetric(q);
+        R.block<3, 3>(0, 0) = w * Eigen::Matrix3d::Identity() - Utility::skewSymmetric(q); //TODO(jxl): 应该为加号？
         R.block<3, 1>(0, 3) = q;
         R.block<1, 3>(3, 0) = -q.transpose();
         R(3, 3) = w;
@@ -191,7 +196,7 @@ bool InitialExtrinsics::calibExRotation(const size_t &idx_ref, const size_t &idx
     //     Eigen::Matrix<double, 4, 1> x = svd.matrixV().col(3);
     //     calib_ext_[idx_data].q_ = Eigen::Quaterniond(x);
     // }
-    Eigen::Matrix<double, 4, 1> x = svd.matrixV().col(3); // [w, x, y, z]
+    Eigen::Matrix<double, 4, 1> x = svd.matrixV().col(3);
     if (x[0] < 0) x = -x; // use the standard quaternion
     calib_ext_[idx_data].q_ = Eigen::Quaterniond(x);
 
@@ -240,7 +245,7 @@ bool InitialExtrinsics::calibExRotation(const size_t &idx_ref, const size_t &idx
     }
 }
 
-bool InitialExtrinsics::calibExTranslation(const size_t &idx_ref, const size_t &idx_data, Pose &calib_result)
+bool InitialExtrinsics::calibExTranslation(const size_t &idx_ref, const size_t &idx_data, Pose &calib_result) //0, 1, [out]
 {
     assert(idx_ref < NUM_OF_LASER);
     assert(idx_data < NUM_OF_LASER);
@@ -259,7 +264,7 @@ bool InitialExtrinsics::calibExTranslation(const size_t &idx_ref, const size_t &
 bool InitialExtrinsics::calibExTranslationNonPlanar(const size_t &idx_ref, const size_t &idx_data)
 {
     const Eigen::Quaterniond &q_zyx = calib_ext_[idx_data].q_;
-    Eigen::MatrixXd A = Eigen::MatrixXd::Zero(v_pose_.size() * 3, 3);
+    Eigen::MatrixXd A = Eigen::MatrixXd::Zero(v_pose_.size() * 3, 3); //paper equ.18
     Eigen::MatrixXd b = Eigen::MatrixXd::Zero(v_pose_.size() * 3, 1);
     for (size_t i = 0; i < v_pose_.size(); i++)
     {
@@ -285,8 +290,8 @@ bool InitialExtrinsics::calibExTranslationPlanar(const size_t &idx_ref, const si
     Eigen::MatrixXd w = Eigen::MatrixXd::Zero(v_pose_.size() * 2, 1);
     for (size_t i = 0; i < v_pose_.size(); i++)
     {
-        const Pose &pose_ref = v_pose_[i][idx_ref];
-        const Pose &pose_data = v_pose_[i][idx_data];
+        const Pose &pose_ref = v_pose_[i][idx_ref]; //i帧时刻，主雷达i-1帧到i帧的delta_T
+        const Pose &pose_data = v_pose_[i][idx_data]; //i帧时刻，副雷达i-1帧到i帧的delta_T
         AngleAxisd ang_axis_ref(pose_ref.q_);
         AngleAxisd ang_axis_data(pose_data.q_);
         double t_dis = abs(pose_ref.t_.dot(ang_axis_ref.axis()) - pose_data.t_.dot(ang_axis_data.axis()));

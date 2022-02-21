@@ -4,17 +4,17 @@
 multiple_thread: 0
 
 # segmmentation
-segment_cloud: 1 # RHD02lab: 1, RHD03garden: 1, RHD04building: 1
-horizon_scan: 1800
-min_cluster_size: 30
-segment_valid_point_num: 5
+segment_cloud: 1 # RHD02lab: 1, RHD03garden: 1, RHD04building: 1  是否对raw点云进行分割，剔除噪点，1：分割， 0： not
+horizon_scan: 1800 #0.2水平角分辨率，360度
+min_cluster_size: 30  #聚类后的一族点至少30个以上点才为valid cluster
+segment_valid_point_num: 5 #点个数少于30个，但是点的segment_valid_point_num > 5, && segment_valid_line_num > 3, 也是一个valid cluster
 segment_valid_line_num: 3
 segment_theta: 0.53 # Lego-loam: 1.0
 
 # laser parameters
-idx_ref: 0
-n_scans: 16
-num_of_laser: 2
+idx_ref: 0	#主雷达id
+n_scans: 16    #laser beams
+num_of_laser: 2	#default
 
 cloud_topic:
    - "/left/velodyne_points"
@@ -26,9 +26,11 @@ opt_window_size: 2
 
 ############################## For normal use
 # Extrinsic parameter between multiple LiDARs.
+#代码中当需要对外参提纯或者估计外参时，不对点云进行分割 
 estimate_extrinsic: 0   # 0  Have an accurate extrinsic parameters. We will trust the following imu^R_cam, imu^T_cam, don't change it.
                         # 1  Have an initial guess about extrinsic parameters. We will optimize around your initial guess.
                         # 2  Have no prior about extrinsic parameters. We will initialize and optimize around them
+
 
 # qx qy qz qw px py pz
 body_T_laser: !!opencv-matrix
@@ -45,6 +47,8 @@ body_T_laser: !!opencv-matrix
    #        0.32182, -0.00094, 0.00744, 0.94677, 0.06641, -0.49424, -0.11251] # refinement
    data: [0, 0, 0, 1, 0, 0, 0,
           0.34087, -0.0101817, 0.0147921, 0.945613, 0.0334837, -0.540249, -0.141798] # PS-Calib
+#主雷达到各个雷达的外参
+
 
 ############################## For Journal experiments
 # 1
@@ -98,33 +102,34 @@ td: !!opencv-matrix                 # initial value of time offset. unit: s. rea
    dt: d
    data: [0, 0]
 
-distortion: 0
-scan_period: 0.1
-laser_sync_threshold: 0.07
+distortion: 1  #1：带运动畸变的scan, 代码中要去做畸变； 0： 不带运动畸变的scan； default: 0
+scan_period: 0.1  #雷达10hz
+laser_sync_threshold: 0.07   #
 
 ######################################################## odometry
 # optimization 
-max_solver_time: 0.015  # max solver itration time (s), to guarantee real time
-max_num_iterations: 4   # max solver itrations, to guarantee real time
+lm_opt_enable: 1 #是否用滑窗把lidar odom位姿与local map进行匹配，再次refine。1：是，0：否。
+max_solver_time: 0.05   # max solver itration time (s), to guarantee real time 滑窗允许计算时间，default=0.015
+max_num_iterations: 4   # max solver itrations, to guarantee real time 	滑窗ceres迭代次数
 
-roi_range: 0.5
-distance_sq_threshold: 25
-nearby_scan: 2.5
+roi_range: 0.5  #0.5m以内的points不考虑
+distance_sq_threshold: 25   #k+1帧laser转换到k帧laser后，kd-tree查找最近点的阈值距离平方
+nearby_scan: 2.5   #corner correspondace(i: j, l) and surf correspondace(i: j, l, m)所在的线束号与i点所在的线束号不能超过2.5
 
 # movement type
-planar_movement: 0
+planar_movement: 0	#标定时是否在平面运动，1：是在平面运动； 0：不在平面运动
 
 # feature corresponding paprameters
-min_match_sq_dis: 1.0
-min_plane_dis: 0.2
+min_match_sq_dis: 1.0	#滑窗中local map kdtree中找对应点(corner and surf correspondance)阈值距离平方
+min_plane_dis: 0.2	#滑窗中local map kdtree中找对应点的cov valid分析
 
 # factor
-marginalization_factor: 1
+marginalization_factor: 1	#滑窗边缘化残差
 point_plane_factor: 1
 point_edge_factor: 1
-prior_factor: 1
-prior_factor_pos: 5
-prior_factor_rot: 40
+prior_factor: 1		#外参旋转平移残差
+prior_factor_pos: 5	#外参平移残差权重
+prior_factor_rot: 40	#外参旋转残差权重
 
 pcl_viewer: 0
 pcl_viewer_normal_ratio: 10
@@ -132,25 +137,27 @@ pcl_viewer_normal_ratio: 10
 # calibration converage parameters
 n_cumu_feature: 20
 lambda_initial: 100
-lambda_thre_calib: 70
-n_calib: 25
+lambda_thre_calib: 70	#paper：Algorithm 1: Monitoring Calibration Convergence
+n_calib: 25	#对每个雷达，25次以上标定成功
 
 # good feature
-odom_gf_ratio: 0.8
+odom_gf_ratio: 0.8	#一帧中好的match of feature points的比例
 
-skip_num_odom_pub: 2
+skip_num_odom_pub: 2	#每隔几帧发布一次前端的scans
+
+# lm_opt_enable： 
 
 ######################################################## mapping
 map_corner_res: 0.2
-map_surf_res: 0.4
+map_surf_res: 0.4  #降采样voxel体素大小
 map_outlier_res: 0.8
-map_sur_kf_res: 1.0
-map_eig_thre: 100
-map_deg_thre: 42
+map_sur_kf_res: 1.0  #构成local map的keyframes降采样分辨率
+map_eig_thre: 100    #后端中curr frame和local map匹配后结果判断解是否退化时的阈值
+map_deg_thre: 42     #当前帧和local map匹配时: 对当前帧所有points打分后的阈值
 
-distance_keyframes: 1.0
-orientation_keyframes: 1.0 
-surrounding_kf_radius: 30.0
+distance_keyframes: 1.0  #保存关键帧距离阈值，单位m
+orientation_keyframes: 1.0   #保存关键帧角度阈值, 单位度
+surrounding_kf_radius: 30.0  #在关键帧的kd tree中搜索距离当期帧30m以内,都有哪些keyframes
 
 # uncertainty parameter
 # translation, rotation, point (rho, phi, zeta)
@@ -168,12 +175,12 @@ uct_measurement: !!opencv-matrix
    rows: 1
    cols: 3
    dt: d
-   data: [0.0025, 0.0025, 0.0025]
+   data: [0.0025, 0.0025, 0.0025]	#当launch中“with_ua”为true时，表明地图中的点(landmark)的cov(对角元素)
 
 uct_ext_ratio: 1.0 # small or other RHD: 0.1, little: 0.5, medium: 1, large: 15
 
 # RHD02: 10, RHD03: 10, RHD04: 10
-trace_threshold_mapping: 100 # min_d: 20
+trace_threshold_mapping: 100 # min_d: 20	#点转换到地图下covariance阈值。如果cov的迹小于该阈值，则才会加入到地图中。
 
 # 1. 10m: 1.25
 # 2. 20m: 7.8

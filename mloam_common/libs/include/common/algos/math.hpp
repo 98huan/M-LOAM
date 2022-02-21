@@ -79,12 +79,13 @@ namespace common
         Eigen::Matrix<typename Derived::Scalar, 4, 4> m;
         Eigen::Matrix<typename Derived::Scalar, 3, 1> vq = q.vec();
         typename Derived::Scalar q4 = q.w();
-        m.block(0, 0, 3, 3) << q4 * I3x3 + SkewSymmetric(vq);
+        m.block(0, 0, 3, 3) << q4 * I3x3 + SkewSymmetric(vq); //
         m.block(3, 0, 1, 3) << -vq.transpose();
         m.block(0, 3, 3, 1) << vq;
         m(3, 3) = q4;
         return m;
     }
+
 
     template<typename Derived>
     inline Eigen::Matrix<typename Derived::Scalar, 4, 4> RightQuatMatrix(const Eigen::QuaternionBase<Derived> &p)
@@ -174,17 +175,23 @@ namespace common
     {
         using namespace Eigen;
         typedef typename MatrixType::Scalar Scalar;
-        
+
+        //https://eigen.tuxfamily.org/dox/classEigen_1_1LLT.html
+        //This class performs a LL^T Cholesky decomposition of a symmetric, positive definite matrix A such that 
+        //A = LL^* = U^*U, where L is lower triangular.
+        //This LLT decomposition is only stable on positive definite matrices,
         Scalar ld = 0;
         if (use_cholesky)
         {
-            LLT<Matrix<Scalar, Dynamic, Dynamic>> chol(M);
-            auto &U = chol.matrixL();
+            LLT<Matrix<Scalar, Dynamic, Dynamic>> chol(M); //6*6
+            auto &U = chol.matrixL(); 
             for (unsigned i = 0; i < M.rows(); ++i)
                 ld += std::log(U(i, i)); // or ld+= std::log(prod(U.diagonal()))
             ld *= 2;
         }
         else
+        //This class represents a LU decomposition of a square invertible matrix, with partial pivoting: 
+        //the matrix A is decomposed as A = PLU where L is unit-lower-triangular, U is upper-triangular, and P is a permutation matrix.
         {
             PartialPivLU<Matrix<Scalar, Dynamic, Dynamic> > lu(M);
             auto &LU = lu.matrixLU();
