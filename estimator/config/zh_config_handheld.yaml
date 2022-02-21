@@ -12,9 +12,9 @@ segment_valid_line_num: 3
 segment_theta: 0.53 # Lego-loam: 1.0
 
 # laser parameters
-idx_ref: 0	#主雷达id
+idx_ref: 0
 n_scans: 16    #laser beams
-num_of_laser: 2	#default
+num_of_laser: 2
 
 cloud_topic:
    - "/left/velodyne_points"
@@ -117,19 +117,19 @@ distance_sq_threshold: 25   #k+1帧laser转换到k帧laser后，kd-tree查找最
 nearby_scan: 2.5   #corner correspondace(i: j, l) and surf correspondace(i: j, l, m)所在的线束号与i点所在的线束号不能超过2.5
 
 # movement type
-planar_movement: 0	#标定时是否在平面运动，1：是在平面运动； 0：不在平面运动
+planar_movement: 0   #标定时是否在平面运动，1：是在平面运动； 0：不在平面运动
 
 # feature corresponding paprameters
-min_match_sq_dis: 1.0	#滑窗中local map kdtree中找对应点(corner and surf correspondance)阈值距离平方
-min_plane_dis: 0.2	#滑窗中local map kdtree中找对应点的cov valid分析
+min_match_sq_dis: 1.0   #滑窗中local map kdtree中找对应点(corner and surf correspondance)阈值距离平方
+min_plane_dis: 0.2   #滑窗中local map kdtree中找对应点的cov valid分析
 
 # factor
-marginalization_factor: 1	#滑窗边缘化残差
+marginalization_factor: 1  #滑窗边缘化残差
 point_plane_factor: 1
 point_edge_factor: 1
-prior_factor: 1		#外参旋转平移残差
-prior_factor_pos: 5	#外参平移残差权重
-prior_factor_rot: 40	#外参旋转残差权重
+prior_factor: 1   #外参旋转平移残差
+prior_factor_pos: 5  #外参平移残差权重
+prior_factor_rot: 40 #外参旋转残差权重
 
 pcl_viewer: 0
 pcl_viewer_normal_ratio: 10
@@ -137,23 +137,23 @@ pcl_viewer_normal_ratio: 10
 # calibration converage parameters
 n_cumu_feature: 20
 lambda_initial: 100
-lambda_thre_calib: 70	#paper：Algorithm 1: Monitoring Calibration Convergence
-n_calib: 25	#对每个雷达，25次以上标定成功
+lambda_thre_calib: 70   #paper：Algorithm 1: Monitoring Calibration Convergence
+n_calib: 25 #对每个雷达，25次以上标定成功
 
 # good feature
-odom_gf_ratio: 0.8	#一帧中好的match of feature points的比例
+odom_gf_ratio: 0.8   #一帧中好的match of feature points的比例
 
-skip_num_odom_pub: 2	#每隔几帧发布一次前端的scans
+skip_num_odom_pub: 2 #每隔几帧发布一次前端的scans
 
 # lm_opt_enable： 
 
 ######################################################## mapping
 map_corner_res: 0.2
-map_surf_res: 0.4  #降采样voxel体素大小
+map_surf_res: 0.4 #降采样voxel体素大小
 map_outlier_res: 0.8
 map_sur_kf_res: 1.0  #构成local map的keyframes降采样分辨率
-map_eig_thre: 100    #后端中curr frame和local map匹配后结果判断解是否退化时的阈值
-map_deg_thre: 42     #当前帧和local map匹配时: 对当前帧所有points打分后的阈值
+map_eig_thre: 100 #后端中curr frame和local map匹配后结果判断解是否退化时的阈值
+map_deg_thre: 42  #当前帧和local map匹配时: 对当前帧所有points打分后的阈值
 
 distance_keyframes: 1.0  #保存关键帧距离阈值，单位m
 orientation_keyframes: 1.0   #保存关键帧角度阈值, 单位度
@@ -175,7 +175,7 @@ uct_measurement: !!opencv-matrix
    rows: 1
    cols: 3
    dt: d
-   data: [0.0025, 0.0025, 0.0025]	#当launch中“with_ua”为true时，表明地图中的点(landmark)的cov(对角元素)
+   data: [0.0025, 0.0025, 0.0025]   #当launch中“with_ua”为true时，表明地图中的点(landmark)的cov(对角元素)
 
 uct_ext_ratio: 1.0 # small or other RHD: 0.1, little: 0.5, medium: 1, large: 15
 
