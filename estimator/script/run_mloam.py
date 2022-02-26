@@ -167,9 +167,9 @@ def mc_eval(start_idx, end_idx, mc_trials):
 def inject_ext_uct_test(start_idx, end_idx, ext_level):
     for idx in range(start_idx, end_idx + 1):
         print('testing sequence: {}'.format(seq_name[idx]))
-        os.environ['data_path'] = '{}/lidar_calibration/mloam_dataset/{}.bag'.format(os.environ['DATA_PATH'], seq_name[idx])
-        os.environ['rpg_path'] = '{}/src/localization/rpg_trajectory_evaluation'.format(os.environ['CATKIN_WS'])
-        os.environ['result_path'] = '{}/results/{}/inject_ext_uct_{}/'.format(os.environ['rpg_path'], platform, seq_name[idx])
+        os.environ['data_path'] = '{}/{}.bag'.format("/home/zh/bags/mloam_bags", seq_name[idx])
+        os.environ['rpg_path'] = '{}/src/localization/rpg_trajectory_evaluation'.format("home/zh/mloam_ws")
+        os.environ['result_path'] = '{}/results/{}/inject_ext_uct_{}'.format(os.environ['rpg_path'], platform, seq_name[idx])
         command = 'mkdir -p $result_path/gf_pcd $result_path/traj $result_path/time \
                             $result_path/pose_graph $result_path/others $result_path/gf_pcd'
         os.system(command)
@@ -225,7 +225,7 @@ if __name__ == '__main__':
         seq_name = ['RHD02lab', 'RHD03garden', 'RHD04building', 'RHD06calib_filter']
         platform = 'handheld'
         seq_main_name = 'rhd_main.sh'
-        yaml_name = 'config_handheld.yaml'
+        yaml_name = 'zh_config_handheld.yaml'
     elif args.sequence == 'RV':
         seq_name = ['RV00_calib', 'RV01', 'RV02']
         platform = 'real_vehicle/pingshan'

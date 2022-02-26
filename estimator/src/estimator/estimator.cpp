@@ -258,7 +258,7 @@ void Estimator::inputCloud(const double &t, const std::vector<PointCloud> &v_las
             PointICloud laser_cloud_segment, laser_cloud_outlier;
             ScanInfo scan_info(N_SCANS, SEGMENT_CLOUD); //16*1
             if (ESTIMATE_EXTRINSIC != 0) scan_info.segment_flag_ = false; //TODO(jxl):当需要对外参提纯或者估计外参时，不移除没有聚类的点
-            img_segment_.segmentCloud(laser_cloud, laser_cloud_segment, laser_cloud_outlier, scan_info);
+            img_segment_.segmentCloud(laser_cloud, laser_cloud_segment, laser_cloud_outlier, scan_info);  //
             //laser_cloud_outlier: 没有形成聚类的points
             //对点云进行聚类，把没有聚类的点移除； 点的强度为：线号(最底下线束为0，最上面线束最大)+时间比例
 

@@ -8,9 +8,9 @@
 
     <arg name="data_source" default="bag"/>
     <arg name="result_save" default="true"/>
-    <arg name="output_path" default="/home/zh/mloam_ws/Downloads/mloam/simu_jackal/"/>
+    <arg name="output_path" default="/home/zh/Downloads/mloam/simu_jackal/"/>
 
-    <arg name="with_ua" default="true" /> <!-- awareness of uncertainty propagation-->    
+    <arg name="with_ua" default="true" /> <!-- awareness of uncertainty propagation-->
     <arg name="gf_method" default="wo_gf" /> <!-- gd_fix, gd_float, rnd, fps, wo_gf-->
     <arg name="gf_ratio_ini" default="1" />
     <arg name="gnc" default="false" />
@@ -33,7 +33,7 @@
                       -output_path=$(arg output_path)
                       -with_ua=$(arg with_ua)
                       -gf_method=$(arg gf_method)
-                      -gf_ratio_ini=$(arg gf_ratio_ini)" output="screen">
+                      -gf_ratio_ini=$(arg gf_ratio_ini)">
                 <remap from="/laser_odom" to="/laser_odom_0"/>
             </node>
         </group>
@@ -71,7 +71,7 @@
             <arg name="mapping_plane_res" value="0.4" />
             <arg name="s_line" value="16" />
         </include>       
-   </group>        
+    </group>        
 
     <!-- run floam  -->
     <group if="$(arg run_floam)">
@@ -80,7 +80,7 @@
             <arg name="s_line" value="16" />
             <arg name="map_res" value="0.4" />
         </include>       
-   </group>        
+    </group>        
 
     <!-- run legoloam  -->
     <group if="$(arg run_legoloam)">
@@ -91,7 +91,7 @@
 
     <!-- run bag -->
     <arg name="bag_file_use" default="true" />
-    <arg name="bag_file" default="/home/zh/bags/mloam_bags/SR01.bag" />
+    <arg name="bag_file" default="/home/zh/bags/mloam_bags/08-05-20-04.bag" />
 
     <param name="use_sim_time" value="true" />
     <group if="$(arg bag_file_use)">

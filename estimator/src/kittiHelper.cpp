@@ -102,7 +102,7 @@ int main(int argc, char** argv)
         cv::Mat right_image = cv::imread(left_image_path.str(), CV_LOAD_IMAGE_GRAYSCALE);
 
         // 3 x 4 transformation matrix of i'th pose of the left camera coordinate system(i.e., z pointing forwards)
-        std::getline(ground_truth_file, line); 
+        std::getline(ground_truth_file, line);
         std::stringstream pose_stream(line);
         std::string s;
         Eigen::Matrix4d gt_pose = Eigen::Matrix4d::Identity();
@@ -111,7 +111,7 @@ int main(int argc, char** argv)
             for (std::size_t j = 0; j < 4; ++j)
             {
                 std::getline(pose_stream, s, ' ');
-                gt_pose(i, j) = stof(s); 
+                gt_pose(i, j) = stof(s);
             }
         }
         std::cout << "camera pose: " << std::endl;

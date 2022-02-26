@@ -33,20 +33,23 @@ estimate_extrinsic: 0   # 0  Have an accurate extrinsic parameters. We will trus
 
 
 # qx qy qz qw px py pz
-body_T_laser: !!opencv-matrix
-   rows: 2
-   cols: 7
-   dt: d
-#    data: [0, 0, 0, 1, 0, 0, 0,
-#           0, 0, 0, 1, 0, 0, 0] # w/o initialization
-#    data: [0, 0, 0, 1, 0, 0, 0,
-#           0.3113, -0.0103, -0.03334, 0.94956, 0.1130, -0.47195, -0.10341] # initialization (old)
-#    data: [0, 0, 0, 1, 0, 0, 0,
-#           0.31744, -0.00431, 0.01186, 0.9468, 0.0308, -0.56911, -0.12243] # initialization (new)
-   # data: [0, 0, 0, 1, 0, 0, 0,
-   #        0.32182, -0.00094, 0.00744, 0.94677, 0.06641, -0.49424, -0.11251] # refinement
-   data: [0, 0, 0, 1, 0, 0, 0,
-          0.34087, -0.0101817, 0.0147921, 0.945613, 0.0334837, -0.540249, -0.141798] # PS-Calib
+#body_T_laser: !!opencv-matrix
+   #rows: 2
+   #cols: 7
+   #dt: d
+##    data: [0, 0, 0, 1, 0, 0, 0,
+##           0, 0, 0, 1, 0, 0, 0] # w/o initialization
+##    data: [0, 0, 0, 1, 0, 0, 0,
+##           0.3113, -0.0103, -0.03334, 0.94956, 0.1130, -0.47195, -0.10341] # initialization (old)
+##    data: [0, 0, 0, 1, 0, 0, 0,
+##           0.31744, -0.00431, 0.01186, 0.9468, 0.0308, -0.56911, -0.12243] # initialization (new)
+   ## data: [0, 0, 0, 1, 0, 0, 0,
+   ##        0.32182, -0.00094, 0.00744, 0.94677, 0.06641, -0.49424, -0.11251] # refinement
+   #data: [0, 0, 0, 1, 0, 0, 0,
+          #0.34087, -0.0101817, 0.0147921, 0.945613, 0.0334837, -0.540249, -0.141798] # PS-Calib
+          
+   #data: [0, 0, 0, 1, 0, 0, 0,
+          #0.0, -0.0, 0.0, 1.0, 0.0, -0.0, -0.0] # PS-Calib
 #主雷达到各个雷达的外参
 
 
@@ -55,12 +58,12 @@ body_T_laser: !!opencv-matrix
 # parameters for testing the online calibration
 # The extrinsics here are for different-level initialization
 # estimate_extrinsic: 1 
-# body_T_laser: !!opencv-matrix
-#    rows: 2
-#    cols: 7
-#    dt: d
-#    data: [0, 0, 0, 1, 0, 0, 0,
-#           0, 0, 0, 1, 0, 0, 0] # w/o initialization
+body_T_laser: !!opencv-matrix
+   rows: 2
+   cols: 7
+   dt: d
+   data: [0, 0, 0, 1, 0, 0, 0,
+          0, 0, 0, 1, 0, 0, 0] # w/o initialization
    # data: [0.00000, 0.00000, 0.00000, 1.00000, 0.00000, 0.00000, 0.00000,
    #        0.21644, 0.0, 0.0, 0.9763, 0.0, 0.0, 0.0] # rough rotation: 25deg 
    # data: [0.00000, 0.00000, 0.00000, 1.00000, 0.00000, 0.00000, 0.00000,

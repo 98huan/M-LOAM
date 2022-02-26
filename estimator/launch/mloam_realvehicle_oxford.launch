@@ -92,7 +92,7 @@
 
     <!-- sensor setup: https://oxford-robotics-institute.github.io/radar-robotcar-dataset/documentation/ -->
     <arg name="bag_file_use" default="true" />
-    <arg name="bag_file" default="/Monster/dataset/oxford_radar_dataset/2019-01-18-15-20-12-radar-oxford-10k/data_ds_250_800.bag"/>
+    <arg name="bag_file" default="/home/zh/bags/mloam_bags/data_ds_250_800.bag"/>
 
     <param name="use_sim_time" value="true" />
     <group if="$(arg bag_file_use)">
@@ -100,11 +100,13 @@
             args="--clock -r 0.8 $(arg bag_file)" required="true"/>
     </group>    
 
-    <group if="$(arg bag_record)">
+    <!-- <group if="$(arg bag_record)">
         <node pkg="rosbag" type="record" name="rosbag_record_gf_exp"
             args="record -o /Monster/dataset/lidar_calibration/mloam_video/gf_exp
                 /tf /laser_cloud_surf_registered /laser_gt_path /laser_odom_path_0 /laser_map_path 
-                /aloam/laser_map_path /floam/laser_map_path /legoloam/laser_map_path"/>
-    </group>
+                /aloam/laser_map_path /floam/laser_map_path /legoloam/laser_map_path"/> 
+    </group> -->
+    
+    <node pkg="rviz" name="rviz" type="rviz" args="-d $(find mloam)/../rviz/mloam_indoor_sr.rviz" />
 
  </launch>

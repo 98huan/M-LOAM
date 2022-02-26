@@ -49,7 +49,7 @@ using namespace std;
 
 DEFINE_bool(result_save, true, "save or not save the results");
 DEFINE_string(config_file, "config.yaml", "the yaml config file");
-DEFINE_string(output_path, "", "the path ouf saving results");
+DEFINE_string(output_path, "/home/zh/mloam_ws/Downloads/mloam/", "the path ouf saving results");
 DEFINE_bool(inject_meas_noise, false, "inject measurement noise on the raw data");
 DEFINE_int32(mc_trial, 0, "monte carlo trial number");
 
@@ -164,7 +164,8 @@ void restart_callback(const std_msgs::BoolConstPtr &restart_msg)
 void odom_gt_callback(const nav_msgs::Odometry &odom_msg)
 {
     Pose pose_world_base(odom_msg);
-    Pose pose_base_ref(Eigen::Quaterniond(0.976, -0.216, 0, 0), Eigen::Vector3d(0, 0.266, 0.734));
+    Pose pose_base_ref(Eigen::Quaterniond(0.976, -0.216, 0, 0), Eigen::Vector3d(0, 0.266, 0.734));  //
+
     Pose pose_world_ref(pose_world_base * pose_base_ref);
     if (laser_gt_path.poses.size() == 0) pose_world_ref_ini = pose_world_ref;
     Pose pose_ref_ini_cur(pose_world_ref_ini.inverse() * pose_world_ref);
@@ -212,7 +213,7 @@ int main(int argc, char **argv)
 
     MLOAM_RESULT_SAVE = FLAGS_result_save;
     OUTPUT_FOLDER = FLAGS_output_path;
-    MLOAM_ODOM_PATH = OUTPUT_FOLDER + "traj/stamped_mloam_odom_estimate_" + to_string(ODOM_GF_RATIO) + ".txt";
+    MLOAM_ODOM_PATH = OUTPUT_FOLDER + "traj/stamped_mloam_odom_estimate_" + to_string(ODOM_GF_RATIO) + ".txt";  //为什么这些文件输出不了？
     MLOAM_GT_PATH = OUTPUT_FOLDER + "traj/stamped_groundtruth.txt";
     EX_CALIB_RESULT_PATH = OUTPUT_FOLDER + "others/extrinsic_parameter.txt";
     EX_CALIB_EIG_PATH = OUTPUT_FOLDER + "others/calib_eig.txt";
