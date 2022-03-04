@@ -73,23 +73,23 @@ target_link_libraries(mloam_lib
 )
 
 ######## --------------------- EXECUTABLE --------------------- ########
-add_executable(kittiHelper src/kittiHelper.cpp)
-target_link_libraries(kittiHelper ${catkin_LIBRARIES} ${PCL_LIBRARIES} ${OpenCV_LIBS})
+# add_executable(kittiHelper src/kittiHelper.cpp)
+# target_link_libraries(kittiHelper ${catkin_LIBRARIES} ${PCL_LIBRARIES} ${OpenCV_LIBS})
 
 add_executable(mloam_node_sr src/rosNodeSR.cpp)
 target_link_libraries(mloam_node_sr mloam_lib)
 
-add_executable(mloam_node_rhd src/rosNodeRHD.cpp) #real hand device 
-target_link_libraries(mloam_node_rhd mloam_lib)
+# add_executable(mloam_node_rhd src/rosNodeRHD.cpp) #real hand device 
+# target_link_libraries(mloam_node_rhd mloam_lib)
 
-add_executable(mloam_node_rv_hercules src/rosNodeRVHercules.cpp)#RV: real vehicle
-target_link_libraries(mloam_node_rv_hercules mloam_lib)
+# add_executable(mloam_node_rv_hercules src/rosNodeRVHercules.cpp)#RV: real vehicle
+# target_link_libraries(mloam_node_rv_hercules mloam_lib)
 
-add_executable(mloam_node_rv_oxford src/rosNodeRVOxford.cpp)
-target_link_libraries(mloam_node_rv_oxford mloam_lib)
+# add_executable(mloam_node_rv_oxford src/rosNodeRVOxford.cpp)
+# target_link_libraries(mloam_node_rv_oxford mloam_lib)
 
-add_executable(mloam_node_rv_kitti src/rosNodeRVKITTI.cpp)
-target_link_libraries(mloam_node_rv_kitti mloam_lib)
+# add_executable(mloam_node_rv_kitti src/rosNodeRVKITTI.cpp)
+# target_link_libraries(mloam_node_rv_kitti mloam_lib)
 
 add_executable(lidar_mapper_keyframe src/lidarMapper/lidar_mapper_keyframe.cpp)
 target_link_libraries(lidar_mapper_keyframe mloam_lib)

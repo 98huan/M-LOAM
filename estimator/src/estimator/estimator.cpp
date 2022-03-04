@@ -13,7 +13,7 @@
 
 #include "estimator.h"
 #include "../utility/visualization.h"
-
+#include "dbg.h"
 using namespace common;
 
 Estimator::Estimator()
@@ -112,8 +112,10 @@ void Estimator::setParameter()
     }
     para_td_ = new double[NUM_OF_LASER];
 
-    eig_thre_ = Eigen::VectorXd::Constant(OPT_WINDOW_SIZE + 1 + NUM_OF_LASER, 1, LAMBDA_INITIAL); //初值：100
-    eig_thre_.block(OPT_WINDOW_SIZE + 1, 0, 1, NUM_OF_LASER) = Eigen::VectorXd::Zero(NUM_OF_LASER); //[100 100 100 0 0]
+    eig_thre_ = Eigen::VectorXd::Constant(OPT_WINDOW_SIZE + 1 + NUM_OF_LASER, 1, LAMBDA_INITIAL);
+    dbg(eig_thre_);
+    eig_thre_.block(OPT_WINDOW_SIZE + 1, 0, 1, NUM_OF_LASER) = Eigen::VectorXd::Zero(NUM_OF_LASER); 
+    dbg(eig_thre_);
     //TODO(jxl): block(OPT_WINDOW_SIZE + 1, 0, NUM_OF_LASER, 1)
 
     d_factor_calib_ = std::vector<double>(NUM_OF_LASER, 0);
@@ -258,7 +260,7 @@ void Estimator::inputCloud(const double &t, const std::vector<PointCloud> &v_las
             PointICloud laser_cloud_segment, laser_cloud_outlier;
             ScanInfo scan_info(N_SCANS, SEGMENT_CLOUD); //16*1
             if (ESTIMATE_EXTRINSIC != 0) scan_info.segment_flag_ = false; //TODO(jxl):当需要对外参提纯或者估计外参时，不移除没有聚类的点
-            img_segment_.segmentCloud(laser_cloud, laser_cloud_segment, laser_cloud_outlier, scan_info);  //
+            img_segment_.segmentCloud(laser_cloud, laser_cloud_segment, laser_cloud_outlier, scan_info);
             //laser_cloud_outlier: 没有形成聚类的points
             //对点云进行聚类，把没有聚类的点移除； 点的强度为：线号(最底下线束为0，最上面线束最大)+时间比例
 
@@ -281,6 +283,8 @@ void Estimator::inputCloud(const double &t, const std::vector<PointCloud> &v_las
     double mea_pre_time = mea_pre_timer.Stop();
     printf("meaPre time: %fms (%lu*%fms)\n", mea_pre_time * 1000, v_laser_cloud_in.size(), 
                                              mea_pre_time * 1000 / v_laser_cloud_in.size());
+    // dbg(mea_pre_time * 1000, v_laser_cloud_in.size());
+
     m_buf_.lock();
     feature_buf_.push(make_pair(t, feature_frame)); //把每帧的features压入到队列中
     m_buf_.unlock();
@@ -340,6 +344,7 @@ void Estimator::inputCloud(const double &t, const std::vector<PointITimeCloud> &
     double mea_pre_time = mea_pre_timer.Stop();
     printf("meaPre time: %fms (%lu*%fms)\n", mea_pre_time * 1000, v_laser_cloud_in.size(), 
                                              mea_pre_time * 1000 / v_laser_cloud_in.size());
+    // dbg(mea_pre_time * 1000, v_laser_cloud_in.size());
 
     m_buf_.lock();
     feature_buf_.push(make_pair(t, feature_frame));
@@ -394,16 +399,16 @@ void Estimator::undistortMeasurements(const std::vector<Pose> &pose_undist)
             for (PointI &point : cur_feature_.second[n]["surf_points_less_flat"]) TransformToEnd(point, point, pose_undist[n], true, SCAN_PERIOD);
 			for (PointI &point : cur_feature_.second[n]["laser_cloud"]) TransformToEnd(point, point, pose_undist[n], true, SCAN_PERIOD);
         } else
-        // if (ESTIMATE_EXTRINSIC == 1) // online calibration
-        // {
-        //     if (n != IDX_REF) continue;
-        //     // for (PointI &point : cur_feature_.second[n]["corner_points_sharp"]) TransformToEnd(point, point, pose_undist[n], true, SCAN_PERIOD);
-        //     // for (PointI &point : cur_feature_.second[n]["surf_points_flat"]) TransformToEnd(point, point, pose_undist[n], true, SCAN_PERIOD);
-        //     for (PointI &point : cur_feature_.second[n]["corner_points_less_sharp"]) TransformToEnd(point, point, pose_undist[n], true, SCAN_PERIOD);
-        //     for (PointI &point : cur_feature_.second[n]["surf_points_less_flat"]) TransformToEnd(point, point, pose_undist[n], true, SCAN_PERIOD);
-		// 	for (PointI &point : cur_feature_.second[n]["laser_cloud"]) TransformToEnd(point, point, pose_undist[n], true, SCAN_PERIOD);
-        // } else
-        // if (ESTIMATE_EXTRINSIC == 0) // pure odometry with accurate extrinsics
+        if (ESTIMATE_EXTRINSIC == 1) // online calibration
+        {
+            if (n != IDX_REF) continue;
+            // for (PointI &point : cur_feature_.second[n]["corner_points_sharp"]) TransformToEnd(point, point, pose_undist[n], true, SCAN_PERIOD);
+            // for (PointI &point : cur_feature_.second[n]["surf_points_flat"]) TransformToEnd(point, point, pose_undist[n], true, SCAN_PERIOD);
+            for (PointI &point : cur_feature_.second[n]["corner_points_less_sharp"]) TransformToEnd(point, point, pose_undist[n], true, SCAN_PERIOD);
+            for (PointI &point : cur_feature_.second[n]["surf_points_less_flat"]) TransformToEnd(point, point, pose_undist[n], true, SCAN_PERIOD);
+			for (PointI &point : cur_feature_.second[n]["laser_cloud"]) TransformToEnd(point, point, pose_undist[n], true, SCAN_PERIOD);
+        } else
+        if (ESTIMATE_EXTRINSIC == 0) // pure odometry with accurate extrinsics
         {
             // Pose pose_ext(qbl_[n], tbl_[n]);
             // Pose pose_undist = pose_ext.inverse() * pose_rlt_[IDX_REF] * pose_ext;
@@ -420,6 +425,7 @@ void Estimator::undistortMeasurements(const std::vector<Pose> &pose_undist)
 
 void Estimator::process()
 {
+    dbg(ESTIMATE_EXTRINSIC);    //打印外参估计的进度 2：无初始估计 1：有初始估计 0：有精确估计
     if (!b_system_inited_) //第一帧scan
     {
         b_system_inited_ = true;
@@ -542,7 +548,11 @@ void Estimator::process()
         {
             // local optimization: optimize the relative LiDAR measurments
             printf("[NON_LINEAR]\n");
-            if (LM_OPT_ENABLE) optimizeMap(); 
+            // dbg(LM_OPT_ENABLE);
+            if (LM_OPT_ENABLE)
+            {
+                optimizeMap(); 
+            } 
 
             slideWindow();
 
@@ -639,7 +649,7 @@ void Estimator::optimizeMap()
     //options.minimizer_progress_to_stdout = true;
     //options.use_nonmonotonic_steps = true;
     options.max_num_iterations = NUM_ITERATIONS;
-    options.max_solver_time_in_seconds = SOLVER_TIME;
+    // options.max_solver_time_in_seconds = SOLVER_TIME;
 
     vector2Double(); //给Xv，Xe赋值
 
@@ -694,6 +704,7 @@ void Estimator::optimizeMap()
     std::vector<ceres::internal::ResidualBlock *> res_ids_proj;
     if (ESTIMATE_EXTRINSIC == 1)
     {
+        // dbg(PRIOR_FACTOR);
         buildCalibMap(); //1. 构建n号雷达在主雷达pivot下的local surf, corner map; 
                          //2. 构建“n号雷达在滑窗中每一帧下points” 在 “n号雷达的local surf, corner map”中的correspondances
         //主雷达local map:   主雷达滑窗内所有帧转到主雷达pivot帧下形成的local map
@@ -899,10 +910,13 @@ void Estimator::optimizeMap()
 
     common::timing::Timer solver_timer("odom_solver");
     ceres::Solve(options, &problem, &summary);
-    std::cout << summary.BriefReport() << std::endl;
-    // std::cout << summary.FullReport() << std::endl;
-    printf("ceres solver costs: %fms\n", solver_timer.Stop() * 1000);
 
+    std::cout << summary.BriefReport() << std::endl;    //这里输出ceres求解收敛情况
+    // std::cout << summary.FullReport() << std::endl;
+
+    printf("ceres solver costs: %fms\n", solver_timer.Stop() * 1000);
+    // dbg(para_ex_pose_[1]);
+    // std::cout << para_ex_pose_[1][0]<<" " << para_ex_pose_[1][1]<<" " << para_ex_pose_[1][2] <<" "<<para_ex_pose_[1][3] <<std::endl; //输出外参
     double2Vector();
 
     // **************************************************** marginalization
@@ -1173,7 +1187,7 @@ void Estimator::buildCalibMap()
     pcl::KdTreeFLANN<PointI>::Ptr kdtree_corner_points_local_map(new pcl::KdTreeFLANN<PointI>());
     for (size_t n = 0; n < NUM_OF_LASER; n++)
     {
-        // if (calib_converge_[n]) continue;
+        if (calib_converge_[n]) continue;
         kdtree_surf_points_local_map->setInputCloud(boost::make_shared<PointICloud>(surf_points_local_map_filtered_[n]));
         kdtree_corner_points_local_map->setInputCloud(boost::make_shared<PointICloud>(corner_points_local_map_filtered_[n]));
         for (size_t i = pivot_idx; i < WINDOW_SIZE + 1; i++)//i=2,3,4
@@ -1730,7 +1744,7 @@ void Estimator::evalDegenracy(std::vector<PoseLocalParameterization *> &local_pa
                 break;
             }
         }
-        std::cout << i << " D factor: " << mat_E(0, 0) << ": " << mat_V_f.col(0).transpose() << std::endl;
+        std::cout << i << " D factor: " << mat_E(0, 0) << ": " << mat_V_f.col(0).transpose() << std::endl;  //退化因子
         LOG(INFO) << i << " D factor: " << mat_E(0, 0) << ": " << mat_V_f.col(0).transpose();
         Eigen::Matrix<double, 6, 6> mat_P = (mat_V_f.transpose()).inverse() * mat_V_p.transpose(); // 6*6， 
         //和该文章作者已经讨论过了
@@ -1755,7 +1769,9 @@ void Estimator::evalDegenracy(std::vector<PoseLocalParameterization *> &local_pa
                 Eigen::Matrix<double, 6, 6> mat_H = mat_JtJ.block(6 * i, 6 * i, 6, 6);
                 Eigen::SelfAdjointEigenSolver<Eigen::Matrix<double, 6, 6>> esolver(mat_H);
                 Eigen::Matrix<double, 1, 6> mat_E = esolver.eigenvalues().real(); // 6*1，特征值从小到大
-                double lambda = mat_E(0, 0) / N_CUMU_FEATURE;
+                double lambda = mat_E(0, 0) / N_CUMU_FEATURE;   //最小的特征值/累积帧数
+                dbg(mat_H);
+                dbg(mat_E);
                 // std::cout << mat_H << std::endl;
                 // double lambda = mat_E(0, 0);
                 printf("%lu: calib eig is %f\n", i - OPT_WINDOW_SIZE - 1, lambda);
@@ -1793,6 +1809,7 @@ void Estimator::evalCalib()
 {
     if (solver_flag_ == NON_LINEAR)
     {
+        dbg(d_factor_calib_);
         for (size_t n = 0; n < NUM_OF_LASER; n++)
         {
             if (d_factor_calib_[n] != 0) // with high constraints
@@ -1815,7 +1832,7 @@ void Estimator::evalCalib()
             if (pose_calib_[n].size() >= N_CALIB) calib_converge_[n] = true; //对每个雷达，25次以上标定成功
             else is_converage = false;
         }
-
+        dbg(is_converage);
         if (is_converage) //所有外参都收敛
         {
             std::cout << common::YELLOW << "Finish nonlinear calibration !" << common::RESET << std::endl;

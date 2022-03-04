@@ -8,9 +8,10 @@
 
     <arg name="data_source" default="bag"/>
     <arg name="result_save" default="true"/>
-    <arg name="output_path" default="/home/zh/Downloads/mloam/simu_jackal/"/>
+    <!-- <arg name="output_path" default="/home/cyy/Downloads/"/> -->
+    <arg name="output_path" default="/home/zh/zh_ws/src/mloam-iplus/results/"/>
 
-    <arg name="with_ua" default="true" /> <!-- awareness of uncertainty propagation-->
+    <arg name="with_ua" default="true" /> <!-- awareness of uncertainty propagation-->    
     <arg name="gf_method" default="wo_gf" /> <!-- gd_fix, gd_float, rnd, fps, wo_gf-->
     <arg name="gf_ratio_ini" default="1" />
     <arg name="gnc" default="false" />
@@ -33,7 +34,7 @@
                       -output_path=$(arg output_path)
                       -with_ua=$(arg with_ua)
                       -gf_method=$(arg gf_method)
-                      -gf_ratio_ini=$(arg gf_ratio_ini)">
+                      -gf_ratio_ini=$(arg gf_ratio_ini)" output="screen">
                 <remap from="/laser_odom" to="/laser_odom_0"/>
             </node>
         </group>
@@ -43,8 +44,10 @@
     <!-- x y z yaw pitch roll -->
     <!-- x y z qx qy qz qw -->
     <!-- world_base: the init position of robot; world_base->world, world->laser_0, aft_mapped->base_link -->
+    <!-- <node name="static_tf_world_base_into_world_sensor" pkg="tf" type="static_transform_publisher"
+        args="0 0.266 0.734 -0.216 0 0 0.976 world_base world 10"/> -->
     <node name="static_tf_world_base_into_world_sensor" pkg="tf" type="static_transform_publisher"
-        args="0 0.266 0.734 -0.216 0 0 0.976 world_base world 10"/>
+        args="0 0 0 0 0 0 1 world_base world 10"/>  <!-- 主雷达与世界坐标系的外参 -->
     <node name="static_tf_world_sensor_into_base_sensor" pkg="tf" type="static_transform_publisher"
         args="0 0 0 0 0 0 1 world laser_0 10"/>
     <node name="static_tf_laser_into_laser_left" pkg="tf" type="static_transform_publisher"
@@ -71,7 +74,7 @@
             <arg name="mapping_plane_res" value="0.4" />
             <arg name="s_line" value="16" />
         </include>       
-    </group>        
+   </group>        
 
     <!-- run floam  -->
     <group if="$(arg run_floam)">
@@ -80,7 +83,7 @@
             <arg name="s_line" value="16" />
             <arg name="map_res" value="0.4" />
         </include>       
-    </group>        
+   </group>        
 
     <!-- run legoloam  -->
     <group if="$(arg run_legoloam)">
@@ -91,7 +94,27 @@
 
     <!-- run bag -->
     <arg name="bag_file_use" default="true" />
-    <arg name="bag_file" default="/home/zh/bags/mloam_bags/08-05-20-04.bag" />
+    <!-- <arg name="bag_file" default="/mnt/hgfs/sharefiles/bags/08-05-20-04.bag" /> -->
+    <!-- <arg name="bag_file" default="/home/zh/bags/08-05-20-04.bag" /> -->
+
+    <!-- 不同初值的影响 -->
+    <arg name="bag_file" default="/home/zh/bags/iplus_bag_S/1-3分钟/iplus_bag_S7_filter.bag" />
+
+    <!-- 不同bag包的标定方差 -->
+    <!-- <arg name="bag_file" default="/home/zh/bags/iplus_bag_S/1-3分钟/iplus_bag_S7_filter.bag" /> -->
+    <!--
+        <arg name="bag_file" default="/home/zh/bags/iplus_bag_S/少于1分钟/iplus_bag_S10_filter.bag" />   1
+        <arg name="bag_file" default="/home/zh/bags/iplus_bag_S/少于1分钟/iplus_bag_S11_filter.bag" />   2
+        <arg name="bag_file" default="/home/zh/bags/iplus_bag_S/1-3分钟/iplus_bag_S2_filter.bag" />     3
+        <arg name="bag_file" default="/home/zh/bags/iplus_bag_S/1-3分钟/iplus_bag_S7_filter.bag" />     4
+        <arg name="bag_file" default="/home/zh/bags/iplus_bag_S/1-3分钟/iplus_bag_S8_filter.bag" />     5
+        <arg name="bag_file" default="/home/zh/bags/iplus_bag_S/1-3分钟/iplus_bag_S9_filter.bag" />     6
+        <arg name="bag_file" default="/home/zh/bags/iplus_bag_S/3-5分钟/iplus_bag_S1_filter.bag" />     7
+        <arg name="bag_file" default="/home/zh/bags/iplus_bag_S/3-5分钟/iplus_bag_S3_filter.bag" />     8
+        <arg name="bag_file" default="/home/zh/bags/iplus_bag_S/3-5分钟/iplus_bag_S5_filter.bag" />     9
+        <arg name="bag_file" default="/home/zh/bags/iplus_bag_S/3-5分钟/iplus_bag_S6_filter.bag" />     10
+        <arg name="bag_file" default="/home/zh/bags/iplus_bag_S/9分钟/iplus_bag_S_big_filter.bag" />    11
+    -->
 
     <param name="use_sim_time" value="true" />
     <group if="$(arg bag_file_use)">
@@ -104,6 +127,6 @@
         <arg name="transform" value="0 0.266 0.734 -0.216 0 0 0.976" />
     </include> -->
     
-    <node pkg="rviz" name="rviz" type="rviz" args="-d $(find mloam)/../rviz/mloam_indoor_sr.rviz" />
+    <!-- <node pkg="rviz" name="rviz" type="rviz" args="-d $(find mloam)/../rviz/mloam_indoor_sr.rviz" /> -->
     
 </launch>

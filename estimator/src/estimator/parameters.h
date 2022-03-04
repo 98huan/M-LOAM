@@ -40,6 +40,7 @@
 
 #include "../estimator/pose.h"
 
+#include "dbg.h"
 using namespace std;
 
 extern int MLOAM_RESULT_SAVE;
@@ -131,6 +132,10 @@ extern float UCT_EXT_RATIO;
 extern std::vector<Eigen::Matrix<double, 6, 6> > COV_EXT;
 extern Eigen::Matrix<double, 3, 3> COV_MEASUREMENT;
 extern double TRACE_THRESHOLD_MAPPING;
+
+Eigen::Quaterniond ToEigen(float* eulur);
+
+Eigen::Vector3d ToEulur(const Eigen::Quaterniond& q);
 
 void readParameters(std::string config_file);
 

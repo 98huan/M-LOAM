@@ -106,6 +106,24 @@ std::vector<Eigen::Matrix<double, 6, 6> > COV_EXT;
 Eigen::Matrix<double, 3, 3> COV_MEASUREMENT;
 double TRACE_THRESHOLD_MAPPING;
 
+
+inline Eigen::Quaterniond ToEigen(float* eulur)
+{
+  Eigen::Matrix3d matrix_tmp;
+  matrix_tmp = (Eigen::AngleAxisd(eulur[0],Eigen::Vector3d::UnitZ()) 
+        * Eigen::AngleAxisd(eulur[1],Eigen::Vector3d::UnitY()) 
+        * Eigen::AngleAxisd(eulur[2],Eigen::Vector3d::UnitX())).toRotationMatrix();
+  Eigen::Quaterniond q(matrix_tmp);
+  return q;
+}
+
+inline Eigen::Vector3d ToEulur(const Eigen::Quaterniond& q) //q(w,x,y,z)
+{
+  Eigen::Vector3d eul = q.matrix().eulerAngles(2,1,0);  //yawl pitch roll  
+  return eul;
+}
+
+
 template <typename T>
 T readParam(ros::NodeHandle &n, std::string name)
 {
@@ -182,12 +200,44 @@ void readParameters(std::string config_file)
         }
 
         cv::Mat cv_T;
+        Eigen::Vector3d temp_eulur;
+        float temp_angle[3];
         fsSettings["body_T_laser"] >> cv_T;
-        for (int i = 0; i < NUM_OF_LASER; i++)
+        for (int i = 0; i < NUM_OF_LASER; i++)  //读入yaml中的外参
         {
-            QBL[i] = Eigen::Quaterniond(cv_T.ptr<double>(i)[3], cv_T.ptr<double>(i)[0], cv_T.ptr<double>(i)[1], cv_T.ptr<double>(i)[2]);
+            QBL[i] = Eigen::Quaterniond(cv_T.ptr<double>(i)[3], cv_T.ptr<double>(i)[0], cv_T.ptr<double>(i)[1], cv_T.ptr<double>(i)[2]);    //w,x,y,z
             TBL[i] = Eigen::Vector3d(cv_T.ptr<double>(i)[4], cv_T.ptr<double>(i)[5], cv_T.ptr<double>(i)[6]);
         }
+        //四元数转欧拉角再转回四元数
+        temp_eulur = ToEulur(QBL[1]);
+        dbg(temp_eulur);
+        for (int i = 0; i <= 2; ++i)
+        {
+            // temp_angle[i] = temp_eulur[i];
+            // temp_angle[i] = temp_eulur[i] - 0.01;
+            // temp_angle[i] = temp_eulur[i] - 0.02;
+            // temp_angle[i] = temp_eulur[i] - 0.03;
+            // temp_angle[i] = temp_eulur[i] - 0.04;
+            // temp_angle[i] = temp_eulur[i] - 0.05;
+            // temp_angle[i] = temp_eulur[i] - 0.06;
+            // temp_angle[i] = temp_eulur[i] - 0.07;
+            // temp_angle[i] = temp_eulur[i] - 0.08;
+            // temp_angle[i] = temp_eulur[i] - 0.09;
+
+            // temp_angle[i] = temp_eulur[i] + 0.01;
+            // temp_angle[i] = temp_eulur[i] + 0.02;
+            // temp_angle[i] = temp_eulur[i] + 0.03;
+            // temp_angle[i] = temp_eulur[i] + 0.04;
+            // temp_angle[i] = temp_eulur[i] + 0.05;
+            // temp_angle[i] = temp_eulur[i] + 0.06;
+            temp_angle[i] = temp_eulur[i] + 0.07;
+            // temp_angle[i] = temp_eulur[i] + 0.08;
+            // temp_angle[i] = temp_eulur[i] + 0.09;
+            // temp_angle[i] = temp_eulur[i] + 0.10;
+        }
+        dbg(temp_angle);
+        QBL[1] = ToEigen(temp_angle);
+        // dbg(temp_quaterniond);
     }
 
     ESTIMATE_TD = fsSettings["estimate_td"];
