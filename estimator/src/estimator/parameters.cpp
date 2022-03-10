@@ -208,11 +208,13 @@ void readParameters(std::string config_file)
             QBL[i] = Eigen::Quaterniond(cv_T.ptr<double>(i)[3], cv_T.ptr<double>(i)[0], cv_T.ptr<double>(i)[1], cv_T.ptr<double>(i)[2]);    //w,x,y,z
             TBL[i] = Eigen::Vector3d(cv_T.ptr<double>(i)[4], cv_T.ptr<double>(i)[5], cv_T.ptr<double>(i)[6]);
         }
-        //四元数转欧拉角再转回四元数
-        temp_eulur = ToEulur(QBL[1]);
-        dbg(temp_eulur);
-        for (int i = 0; i <= 2; ++i)
-        {
+
+        // 如果需要改初值的欧拉角把下面的注释打开
+        // 四元数转欧拉角再转回四元数
+        // temp_eulur = ToEulur(QBL[1]);
+        // dbg(temp_eulur);
+        // for (int i = 0; i <= 2; ++i)
+        // {
             // temp_angle[i] = temp_eulur[i];
             // temp_angle[i] = temp_eulur[i] - 0.01;
             // temp_angle[i] = temp_eulur[i] - 0.02;
@@ -230,13 +232,14 @@ void readParameters(std::string config_file)
             // temp_angle[i] = temp_eulur[i] + 0.04;
             // temp_angle[i] = temp_eulur[i] + 0.05;
             // temp_angle[i] = temp_eulur[i] + 0.06;
-            temp_angle[i] = temp_eulur[i] + 0.07;
+            // temp_angle[i] = temp_eulur[i] + 0.07;
             // temp_angle[i] = temp_eulur[i] + 0.08;
             // temp_angle[i] = temp_eulur[i] + 0.09;
             // temp_angle[i] = temp_eulur[i] + 0.10;
-        }
-        dbg(temp_angle);
-        QBL[1] = ToEigen(temp_angle);
+        // }
+        // dbg(temp_angle);
+        // QBL[1] = ToEigen(temp_angle);
+        // 如果需要改初值的欧拉角把上面的注释打开
         // dbg(temp_quaterniond);
     }
 
