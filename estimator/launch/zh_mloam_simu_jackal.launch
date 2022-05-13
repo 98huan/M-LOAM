@@ -98,7 +98,7 @@
     <!-- <arg name="bag_file" default="/home/zh/bags/08-05-20-04.bag" /> -->
 
     <!-- 不同初值的影响 -->
-    <arg name="bag_file" default="/home/zh/bags/iplus_bag_S/1-3分钟/iplus_bag_S9_filter.bag" />
+    <arg name="bag_file" default="/home/zhonghuan/bagfiles/iplus_bag_S2.bag" />
 
     <!-- 不同bag包的标定方差 -->
     <!-- <arg name="bag_file" default="/home/zh/bags/iplus_bag_S/1-3分钟/iplus_bag_S7_filter.bag" /> -->
